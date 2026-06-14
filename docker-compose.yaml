@@ -5,7 +5,7 @@ services:
     privileged: true
     network_mode: host
     volumes:
-      - '/:/host-root'
+      - '/:/host-root:rshared'
     command:
       - sh
       - -c
